@@ -8,6 +8,7 @@ import os.path
 import shutil
 import tempfile
 import time
+import json
 
 from sqlalchemy.orm.session import make_transient
 
@@ -59,6 +60,11 @@ def initvm(image, name=None, multi=False, ramsize=None, vramsize=None, cpus=None
         m.hostonly(nictype=h.nictype, adapter=image.adapter)
 
     return m, h
+
+def parse_specs(specs_file):
+    with open(specs_file, "r") as f:
+        specs = json.load(f);
+    name = 
 
 @click.group(invoke_without_command=True)
 @click.option("-u", "--user", help="Drop privileges to user.")
@@ -122,11 +128,19 @@ def clone(name, outname):
 def init(name, winxp, win7x86, win7x64, win81x86, win81x64, win10x86,
          win10x64, product, vm, iso_mount, serial_key, ip, port, adapter,
          netmask, gateway, dns, cpus, ramsize, vramsize, tempdir, resolution,
-         vm_visible, debug, verbose):
+         vm_visible, load_specs, debug, verbose):
     if verbose:
         log.setLevel(logging.INFO)
     if debug:
         log.setLevel(logging.DEBUG)
+        
+    if load_specs:
+            if os.path.isfile(load_specs):
+                name, winxp, win7x86, win7x64, win81x86, win81x64, win10x86, win10x64, iso_mount, ip, adapter, netmask, gateway, dns, cpus, ramsize, vramsize, resolution = elf.parse_specs(load_specs)
+            else:
+                log.error("Please specify --load-specs to a file contaning the "
+                          "desired virtual machine specification")
+                exit(1)
 
     session = Session()
     image = session.query(Image).filter_by(name=name).first()
@@ -137,7 +151,7 @@ def init(name, winxp, win7x86, win7x64, win81x86, win81x64, win10x86,
     if vm not in VMCLOAK_VM_MODES:
         log.error("Only VirtualBox Machinery or iso is supported at this point.")
         exit(1)
-
+    
     if winxp:
         h = WindowsXP()
         osversion = "winxp"
